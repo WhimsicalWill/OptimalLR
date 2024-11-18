@@ -4,9 +4,12 @@ import numpy as np
 
 MODEL_PARAMS = (1, 64, 1)  # Model parameters (depth, channels, heads)
 NUM_ITERS = 1250  # Number of iterations to run (full training run is 20_000 steps)
+STARTING_LR_LOW = 0.01
+STARTING_LR_HIGH = 0.5
 LOSS_INCREASE_RATIO = 1
 EXPERIMENT_GROUP = "exp_binary_search_scale_1"
 S3_BUCKET_NAME = "10605willhw5"
+
 
 def parse_logfile(log_file_path):
     """
@@ -36,6 +39,7 @@ def parse_logfile(log_file_path):
         raise ValueError("Insufficient data for divergence checks.")
 
     return train_loss_list, val_loss_list
+
 
 def check_divergence(log_file_path):
     """
@@ -112,7 +116,11 @@ def binary_search_lr(low, high, eps=0.001):
 
         upload_logs_to_s3(exp_name)
 
-    return best_lr
+    print(f"The highest learning rate that doesn't diverge is {best_learning_rate}")
+
+    # Shutdown the machine after all experiments are done
+    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+
 
 def upload_logs_to_s3(exp_name):
     """
@@ -133,7 +141,4 @@ def upload_logs_to_s3(exp_name):
         print(f"Error uploading results to S3: {e}")
 
 
-STARTING_LR_LOW = 0.01
-STARTING_LR_HIGH = 0.5
 best_learning_rate = binary_search_lr(STARTING_LR_LOW, STARTING_LR_HIGH)
-print(f"The best learning rate found is {best_learning_rate}")

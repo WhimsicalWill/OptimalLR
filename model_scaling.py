@@ -1,7 +1,7 @@
 import subprocess
 
 # Fixed array of LRs to use in different experiments
-NUM_ITERS = 2000
+NUM_ITERS = 5000
 BASE_MODEL_PARAMS = (1, 64, 1)  # base settings for depth, channels, heads
 learning_rates = [0.02, 0.04, 0.08, 0.16, 0.32]
 
@@ -46,5 +46,5 @@ def run_model_experiments(scaling_factor):
 # its basically an hour per 1000 steps, and we have 5 different LR settings
 # another thing to consider is that first 700 steps is warmup
 run_data_experiments(1)
-run_data_experiments(2)
-run_data_experiments(3)
+# run_data_experiments(2)
+# run_data_experiments(3)
