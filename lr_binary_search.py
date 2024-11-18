@@ -3,8 +3,10 @@ import subprocess
 import numpy as np
 
 MODEL_PARAMS = (1, 64, 1)  # Model parameters (depth, channels, heads)
-NUM_ITERS = 500  # Number of iterations to run (full training run is 20_000 steps)
+NUM_ITERS = 1250  # Number of iterations to run (full training run is 20_000 steps)
 LOSS_INCREASE_RATIO = 1
+EXPERIMENT_GROUP = "exp_binary_search_scale_1"
+S3_BUCKET_NAME = "10605willhw5"
 
 def parse_logfile(log_file_path):
     """
@@ -97,7 +99,7 @@ def binary_search_lr(low, high, eps=0.001):
             '-l', str(mid),
             '-x', str(NUM_ITERS)
         ]
-        subprocess.run(command)
+        subprocess.run(command, check=True)
 
         # Check if the training diverged
         if check_divergence(log_file):
@@ -108,10 +110,30 @@ def binary_search_lr(low, high, eps=0.001):
             best_lr = mid
             low = mid
 
+        upload_logs_to_s3(exp_name)
+
     return best_lr
+
+def upload_logs_to_s3(exp_name):
+    """
+    Upload the experiment results to S3.
+    Args:
+        exp_name (str): Name of the experiment directory.
+    """
+    try:
+        upload_command = [
+            'python', 'upload_to_s3.py',
+            S3_BUCKET_NAME,
+            exp_name,
+            EXPERIMENT_GROUP,
+        ]
+        subprocess.run(upload_command, check=True)
+        print(f"Results uploaded to S3 for experiment: {exp_name}")
+    except Exception as e:
+        print(f"Error uploading results to S3: {e}")
 
 
 STARTING_LR_LOW = 0.01
-STARTING_LR_HIGH = 1.0
+STARTING_LR_HIGH = 0.5
 best_learning_rate = binary_search_lr(STARTING_LR_LOW, STARTING_LR_HIGH)
 print(f"The best learning rate found is {best_learning_rate}")
