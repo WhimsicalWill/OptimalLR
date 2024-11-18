@@ -1,11 +1,13 @@
 import subprocess
 import numpy as np
 
-MODEL_PARAMS = (1, 64, 1)  # Model parameters (depth, channels, heads)
+MODEL_DEPTH = 1
+MODEL_CHANNELS = 64
+MODEL_HEADS = 1
 NUM_ITERS = 1250  # Number of iterations to run
 STARTING_LR_LOW = 1e-4  # 6e-4 is recommended in GPT-3 paper
 STARTING_LR_HIGH = 0.16
-EXPERIMENT_GROUP = "exp_halving_search_scale_1"
+EXPERIMENT_GROUP = "exp_halving_search_real_scale_1"
 S3_BUCKET_NAME = "10605willhw5"
 
 
@@ -32,7 +34,8 @@ def parse_logfile(log_file_path):
 
     return val_loss_list[-1]  # Return the last recorded validation loss
 
-def successive_halving_lr(low, high, eps=0.0001):
+
+def successive_halving_lr(low, high, eps=0.001):
     """
     Perform a successive halving search to find the learning rate that minimizes validation loss.
     Args:
@@ -41,6 +44,8 @@ def successive_halving_lr(low, high, eps=0.0001):
         eps (float): The precision of the learning rate search.
     """
     N = 3  # Number of points to test within the interval
+    lr_cache = {}  # Cache to store learning rates and their validation losses
+
     while high - low > eps:
         gap = (high - low) / (N + 1)
         lr_list = [low + i * gap for i in range(1, N+1)]
@@ -49,23 +54,29 @@ def successive_halving_lr(low, high, eps=0.0001):
         print(f"Running training jobs with LRs: {lr_list}")
 
         for lr in lr_list:
-            exp_name = f"exp_halving_search_{lr}"
-            log_file = f"./{exp_name}/main.log"
-            command = [
-                './train_gpt2cu',
-                '-o', exp_name,
-                '-1d', str(MODEL_PARAMS[0]),
-                '-1c', str(MODEL_PARAMS[1]),
-                '-1h', str(MODEL_PARAMS[2]),
-                '-l', str(lr),
-                '-x', str(NUM_ITERS)
-            ]
+            if lr in lr_cache:
+                val_loss = lr_cache[lr]
+                print(f"Using cached result for LR: {lr}")
+            else:
+                exp_name = f"exp_halving_search_{lr}"
+                log_file = f"./{exp_name}/main.log"
+                command = [
+                    './train_gpt2cu',
+                    '-o', exp_name,
+                    '-1d', str(MODEL_DEPTH),
+                    '-1c', str(MODEL_CHANNELS),
+                    '-1h', str(MODEL_HEADS),
+                    '-l', str(lr),
+                    '-x', str(NUM_ITERS)
+                ]
 
-            print(f"Running training job with LR: {lr}")
-            subprocess.run(command, check=True)
-            val_loss = parse_logfile(log_file)
+                print(f"Running training job with LR: {lr}")
+                subprocess.run(command, check=True)
+                val_loss = parse_logfile(log_file)
+                lr_cache[lr] = val_loss
+                upload_logs_to_s3(exp_name)
+
             val_losses.append(val_loss)
-            upload_logs_to_s3(exp_name)
 
         best_idx = np.argmin(val_losses)
         # Adjust interval to include the neighbors of the best index
@@ -81,6 +92,9 @@ def successive_halving_lr(low, high, eps=0.0001):
 
     best_lr = (low + high) / 2
     print(f"The learning rate that minimizes the validation loss is approximately: {best_lr}")
+
+    # Shutdown the machine after all experiments are done
+    subprocess.run(['sudo', 'shutdown', '-h', 'now'])
 
 def upload_logs_to_s3(exp_name):
     """
@@ -99,5 +113,6 @@ def upload_logs_to_s3(exp_name):
         print(f"Results uploaded to S3 for experiment: {exp_name}")
     except Exception as e:
         print(f"Error uploading results to S3: {e}")
+
 
 successive_halving_lr(STARTING_LR_LOW, STARTING_LR_HIGH)
