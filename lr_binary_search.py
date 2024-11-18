@@ -1,7 +1,9 @@
+import subprocess
+
 import numpy as np
 
 MODEL_PARAMS = (1, 64, 1)  # Model parameters (depth, channels, heads)
-NUM_ITERS = 250  # Number of iterations to run (full training run is 20_000 steps)
+NUM_ITERS = 500  # Number of iterations to run (full training run is 20_000 steps)
 LOSS_INCREASE_RATIO = 1
 
 def parse_logfile(log_file_path):
@@ -111,5 +113,5 @@ def binary_search_lr(low, high, eps=0.001):
 
 STARTING_LR_LOW = 0.01
 STARTING_LR_HIGH = 1.0
-best_learning_rate = binary_search_lr(STARTING_LR_LOW, STARTING_LR_HIGH, 20000)
+best_learning_rate = binary_search_lr(STARTING_LR_LOW, STARTING_LR_HIGH)
 print(f"The best learning rate found is {best_learning_rate}")
