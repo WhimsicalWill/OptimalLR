@@ -16,6 +16,9 @@ def run_model_experiments(scaling_factor):
     Args:
         scaling_factor (int): The scaling factor to multiply the base model params by.
     """
+    depth = int(scaling_factor * MODEL_DEPTH)
+    channels = int(scaling_factor * MODEL_CHANNELS)
+    heads = int(scaling_factor * MODEL_HEADS)
     for lr in LEARNING_RATES:
         exp_name = f"exp_model_scaling_sf_{scaling_factor}_lr_{lr}"
 
@@ -25,11 +28,11 @@ def run_model_experiments(scaling_factor):
         command = [
             './train_gpt2cu',
             '-o', exp_name,
-            '-1d', str(scaling_factor * MODEL_DEPTH),
-            '-1c', str(scaling_factor * MODEL_CHANNELS),
-            '-1h', str(scaling_factor * MODEL_HEADS),
+            '-1d', str(depth),
+            '-1c', str(channels),
+            '-1h', str(heads),
             '-l', str(lr),
-            '-x', NUM_ITERS
+            '-x', str(NUM_ITERS)
         ]
 
         # Execute the command
