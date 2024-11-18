@@ -2,8 +2,12 @@ import subprocess
 
 # Fixed array of LRs to use in different experiments
 NUM_ITERS = 5000
-BASE_MODEL_PARAMS = (1, 64, 1)  # base settings for depth, channels, heads
-learning_rates = [0.02, 0.04, 0.08, 0.16, 0.32]
+MODEL_DEPTH = 1
+MODEL_CHANNELS = 64
+MODEL_HEADS = 1
+EXPERIMENT_GROUP = "exp_model_scaling_sf_1"
+S3_BUCKET_NAME = "10605willhw5"
+LEARNING_RATES = [1.5355e-1, 5.75e-2, 8e-2, 1.325e-1]
 
 def run_model_experiments(scaling_factor):
     """
@@ -12,11 +16,7 @@ def run_model_experiments(scaling_factor):
     Args:
         scaling_factor (int): The scaling factor to multiply the base model params by.
     """
-
-    depth, channels, heads = (scaling_factor * param for param in BASE_MODEL_PARAMS)
-
-    # Loop through each learning rate and execute the training command
-    for i, lr in enumerate(learning_rates):
+    for lr in LEARNING_RATES:
         exp_name = f"exp_model_scaling_sf_{scaling_factor}_lr_{lr}"
 
         print(f"Running experiment: {exp_name} with learning rate: {lr}")
@@ -25,26 +25,45 @@ def run_model_experiments(scaling_factor):
         command = [
             './train_gpt2cu',
             '-o', exp_name,
-            '-1d', depth,
-            '-1c', channels,
-            '-1h', heads,
+            '-1d', scaling_factor * MODEL_DEPTH,
+            '-1c', scaling_factor * MODEL_CHANNELS,
+            '-1h', scaling_factor * MODEL_HEADS,
             '-l', str(lr),
             '-x', NUM_ITERS
         ]
 
         # Execute the command
-        subprocess.run(command)
+        subprocess.run(command, check=True)
+
+        upload_logs_to_s3(exp_name)
 
     # Shutdown the machine after all experiments are done
     subprocess.run(['sudo', 'shutdown', '-h', 'now'])
+
+
+def upload_logs_to_s3(exp_name):
+    """
+    Upload the experiment results to S3.
+    Args:
+        exp_name (str): Name of the experiment directory.
+    """
+    try:
+        upload_command = [
+            'python', 'upload_to_s3.py',
+            S3_BUCKET_NAME,
+            exp_name,
+            EXPERIMENT_GROUP,
+        ]
+        subprocess.run(upload_command, check=True)
+        print(f"Results uploaded to S3 for experiment: {exp_name}")
+    except Exception as e:
+        print(f"Error uploading results to S3: {e}")
+
 
 # Settings used for full training run:
     # depth: 6
     # channels: 384
     # heads: 6
     # 20000 steps
-# its basically an hour per 1000 steps, and we have 5 different LR settings
-# another thing to consider is that first 700 steps is warmup
-run_data_experiments(1)
-# run_data_experiments(2)
-# run_data_experiments(3)
+# its basically an hour per 1000 steps
+run_model_experiments(1)
