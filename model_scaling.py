@@ -25,9 +25,9 @@ def run_model_experiments(scaling_factor):
         command = [
             './train_gpt2cu',
             '-o', exp_name,
-            '-1d', scaling_factor * MODEL_DEPTH,
-            '-1c', scaling_factor * MODEL_CHANNELS,
-            '-1h', scaling_factor * MODEL_HEADS,
+            '-1d', str(scaling_factor * MODEL_DEPTH),
+            '-1c', str(scaling_factor * MODEL_CHANNELS),
+            '-1h', str(scaling_factor * MODEL_HEADS),
             '-l', str(lr),
             '-x', NUM_ITERS
         ]
