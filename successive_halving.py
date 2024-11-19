@@ -1,15 +1,16 @@
 import subprocess
 import numpy as np
 
-MODEL_DEPTH = 1
-MODEL_CHANNELS = 64
-MODEL_HEADS = 1
+MODEL_DEPTH = 6
+MODEL_CHANNELS = 384
+MODEL_HEADS = 6
 NUM_ITERS = 1250  # Number of iterations to run
-STARTING_LR_LOW = 1e-4  # 6e-4 is recommended in GPT-3 paper
-STARTING_LR_HIGH = 0.1
-EXPERIMENT_GROUP = "successive_halving_sf_1_exp_3"
+STARTING_LR_LOW = 6e-4  # 6e-4 is recommended for some smaller models in GPT-3 paper
+STARTING_LR_HIGH = 8e-3  # experiments with smaller model suggest this as a decent upper bound
+EXPERIMENT_GROUP = "successive_halving_sf_6_exp_1"
 S3_BUCKET_NAME = "10605willhw5"
 
+EPS = 1e-5  # the tolerance used as a stopping criterion during search
 
 def parse_logfile(log_file_path):
     """
@@ -35,18 +36,17 @@ def parse_logfile(log_file_path):
     return val_loss_list[-1]  # Return the last recorded validation loss
 
 
-def successive_halving_lr(low, high, eps=0.001):
+def successive_halving_lr(low, high):
     """
     Perform a successive halving search to find the learning rate that minimizes validation loss.
     Args:
         low (float): Lower bound of the learning rate to start the search.
         high (float): Upper bound of the learning rate to start the search.
-        eps (float): The precision of the learning rate search.
     """
     N = 3  # Number of points to test within the interval
     lr_cache = {}  # Cache to store learning rates and their validation losses
 
-    while high - low > eps:
+    while high - low > EPS:
         gap = (high - low) / (N + 1)
         lr_list = [low + i * gap for i in range(1, N+1)]
         val_losses = []
