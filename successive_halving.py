@@ -6,8 +6,8 @@ MODEL_CHANNELS = 64
 MODEL_HEADS = 1
 NUM_ITERS = 1250  # Number of iterations to run
 STARTING_LR_LOW = 1e-4  # 6e-4 is recommended in GPT-3 paper
-STARTING_LR_HIGH = 0.16
-EXPERIMENT_GROUP = "exp_halving_search_real_scale_1"
+STARTING_LR_HIGH = 0.1
+EXPERIMENT_GROUP = "successive_halving_sf_1_exp_3"
 S3_BUCKET_NAME = "10605willhw5"
 
 
